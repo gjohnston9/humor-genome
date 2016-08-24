@@ -25,6 +25,7 @@ for query in queries:
 
 	for num, img in enumerate(images):
 	    raw_img = urllib2.urlopen(img).read()
-	    f = open("images_test/" + query.replace(" ", "_") + "-"+ str(num), 'wb')
+	    filename = "images/{}-{}.jpg".format(query.replace(" ", "_"), num)
+	    f = open(filename, 'wb')
 	    f.write(raw_img)
 	    f.close()

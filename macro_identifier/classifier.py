@@ -50,7 +50,6 @@ pca = RandomizedPCA(n_components = 2) # TODO: after classifier is finished, see 
 X = pca.fit_transform(data)
 df = pd.DataFrame({"x" : X[:, 0], "y" : X[:, 1], "label": labels})
 
-# colors = ["red", "yellow", "blue"]
 colors = [
 	'#FF3333',  # red
 	'#0198E1',  # blue
