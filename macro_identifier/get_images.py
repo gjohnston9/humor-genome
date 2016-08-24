@@ -21,7 +21,7 @@ queries = ("good guy greg", "minor mistake marvin", "evil toddler",
 for query in queries:
 	url = "http://www.bing.com/images/search?q=" + query.replace(" ", "+") + "+meme+jpg"
 	soup = get_soup(url)
-	images = [a['src'] for a in soup.find_all("img", {"src": re.compile("mm.bing.net")})][:10]
+	images = [a['src'] for a in soup.find_all("img", {"src": re.compile("mm.bing.net")})]
 
 	for num, img in enumerate(images):
 	    raw_img = urllib2.urlopen(img).read()
