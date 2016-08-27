@@ -1,20 +1,65 @@
 import pandas as pd
-from sklearn.ensemble import AdaBoostClassifier
 from sklearn.cross_validation import cross_val_score, train_test_split
 from sklearn import svm, metrics
 from sklearn.neighbors import KNeighborsClassifier
 import matplotlib.pyplot as pl
 from matplotlib.backends.backend_pdf import PdfPages
 
-if __name__ == "__main__":
-	verbose = False
-	for k in range(1,7):
+from IPython import embed
+
+
+def cross_validate_knn_unreduced(k_range, verbose = False):
+	# df = pd.read_csv("data/unreduced_images.csv")
+
+	tp = pd.read_csv("data/unreduced_images.csv", iterator = True, chunksize = 5)
+	
+	if verbose:
+		print "finished reading CSV. concatenating chunks that were read."
+	
+	df = pd.concat(tp, ignore_index = True)
+	
+	if verbose:
+		print "finished concatenating."
+
+	all_scores = []
+
+	for k in k_range:
+		if verbose:
+			print "using k={} for KNN".format(k)
+
+		samples = zip(*(df[str(j)] for j in range(sum(1 for k in df.keys() if k.isdigit()))))
+		targets = df["label"]
+
+		# embed()
+
+		scores = cross_val_score(KNeighborsClassifier(n_neighbors = k), samples, targets, cv = 5)
+		avg = sum(scores) / len(scores)
+
+		if verbose:
+			print avg
+
+		all_scores.append(avg)
+
+	pl.plot(k_range, all_scores, marker = "o")
+
+	pl.xlabel("number of neighbors used in KNN")
+	pl.ylabel("average accuracy during cross validation")
+	pl.title("numbers of neighbors used in KNN vs. cross validation accuracy")
+	pl.grid()
+
+	pl.show()
+
+
+def cross_validate_knn_reduced(k_range, n_components_range, path, verbose = False):
+	for k in k_range:
 		all_scores = []
-		for i in range(2,25):
+		for i in n_components_range:
 			if verbose:
 				print "using {} components".format(i)
-			df = pd.read_csv("reduced_images/images_{}_components.csv".format(i))
-			samples = zip(*(df[chr(j+97)] for j in range(i)))
+
+			df = pd.read_csv(path + "/{}_components.csv".format(i))
+
+			samples = zip(*(df[str(j)] for j in range(i)))
 			targets = df["label"]
 
 			# x_train, x_test, y_train, y_test = train_test_split(samples, targets, test_size = 0.33)
@@ -25,13 +70,17 @@ if __name__ == "__main__":
 			# print "Confusion matrix:\n{}".format(metrics.confusion_matrix(y_test, predicted))
 			# print "accuracy: {}".format(metrics.accuracy_score(y_test, predicted))
 
+			# embed()
+
 			scores = cross_val_score(KNeighborsClassifier(n_neighbors = k), samples, targets, cv = 5)
 			avg = sum(scores) / len (scores)
+
 			if verbose:
 				print avg
+
 			all_scores.append(avg)
 
-		pl.plot(range(2,25), all_scores, marker = "o", label = "KNN, k={}".format(k))
+		pl.plot(n_components_range, all_scores, marker = "o", label = "KNN, k={}".format(k))
 		if verbose:
 			print "\n\n\n"
 
@@ -40,7 +89,13 @@ if __name__ == "__main__":
 	pl.title("number of components vs. cross validation accuracy")
 	pl.legend()
 	pl.grid()
-	# pl.show()
 
-	with PdfPages("knn_randomizedPCA.pdf") as pdf:
+	with PdfPages("results/KNN-{}.pdf".format(path.split("/")[-1])) as pdf:
 		pdf.savefig()
+
+	pl.show()	
+
+if __name__ == "__main__":
+	# cross_validate_knn_reduced(range(1,7), range(1,25), "data/reduced_images/Randomized_PCA", verbose = True)
+	cross_validate_knn_reduced(range(1,7), range(1,10), "data/reduced_images/PCA", verbose = True)
+	# cross_validate_knn_unreduced(range(1,7), verbose = True) # don't try to do this on laptop...

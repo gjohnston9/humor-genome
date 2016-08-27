@@ -2,12 +2,11 @@
 
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import RandomizedPCA
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.cross_validation import cross_val_score
+import sklearn.decomposition
 import matplotlib.pyplot as pl
-from PIL import Image
 
+from sklearn.cross_validation import cross_val_score
+from PIL import Image
 from IPython import embed
 
 import os
@@ -41,75 +40,109 @@ def flatten_image(img):
     return img_wide[0]
 
 
-def get_reduced_dataset(num_components):
-	"""
-	reduce the dimensionality of the images dataset
-	"""
-	img_dir = "images/"
-	images = [img_dir + f for f in os.listdir(img_dir)]
-	labels = [re.split("[-/]", f)[-2] for f in images]
+def get_non_reduced_dataset(n = None):
+    """
+    transform the images for use with a classifier, but don't apply any dimensionality reduction
+    """
+    img_dir = "data/images/"
+    images = [img_dir + f for f in os.listdir(img_dir)][:n]
+    labels = [re.split("[-/]", f)[-2] for f in images][:n]
 
-	data = []
-	for image in images:
-	    img = img_to_matrix(image, verbose = False)
-	    img = flatten_image(img)
-	    data.append(img)
+    data = []
+    counter = 0
+    for image in images:
+        counter += 1
+        img = img_to_matrix(image, verbose = False)
+        img = flatten_image(img)
+        data.append(img)
+        if counter % 10 == 0:
+            print "finished transforming {} of {} images".format(counter, len(images))
 
 
-	data = np.array(data)
+    data = np.array(data)
 
-	pca = RandomizedPCA(n_components = num_components)
-	X = pca.fit_transform(data)
+    columns = {i : column for i, column in enumerate(data.transpose())}
+    columns["label"] = labels
 
-	columns = {chr(i+97) : X[:, i] for i in range(X.shape[1])}
-	columns["label"] = labels
+    df = pd.DataFrame(columns)
+    
+    return df
 
-	df = pd.DataFrame(columns)
 
-	return df
+def get_reduced_dataset(decomp_alg, *args, **kwargs):
+    """
+    reduce the dimensionality of the images dataset, using the supplied algorithm and parameters
+    """
+    img_dir = "data/images/"
+    images = [img_dir + f for f in os.listdir(img_dir)]
+    labels = [re.split("[-/]", f)[-2] for f in images]
+
+    data = []
+    for image in images:
+        img = img_to_matrix(image, verbose = False)
+        img = flatten_image(img)
+        data.append(img)
+
+
+    data = np.array(data)
+
+    decomp = decomp_alg(*args, **kwargs)
+    X = decomp.fit_transform(data)
+
+    columns = {i : X[:, i] for i in range(X.shape[1])}
+    columns["label"] = labels
+
+    df = pd.DataFrame(columns)
+
+    return df
 
 
 def plot_2d():
-	"""
-	reduce dimensionality of images dataset to 2, and plot the result
-	"""
+    """
+    reduce dimensionality of images dataset to 2, and plot the result
+    """
+    data = get_reduced_dataset(sklearn.decomposition.RandomizedPCA, n_components=2)
 
-	data = get_reduced_dataset(2)
+    colors = [
+        "#FFC9D7",
+        "#131313",
+        "#FFB300",
+        "#FFDB8B",
+        "#803E75",
+        "#FF6800",
+        "#A6BDD7",
+        "#C10020",
+        "#CEA262",
+        "#817066",
+        "#007D34",
+        "#F6768E",
+        "#00538A",
+        "#FF7A5C",
+        "#53377A",
+        "#FF8E00",
+        "#B32851",
+        "#F4C800",
+        "#7F180D",
+        "#93AA00",
+        "#593315",
+        "#F13A13",
+        "#232C16",
+    ]
 
-	colors = [
-		"#FFC9D7",
-		"#131313",
-		"#FFB300",
-		"#FFDB8B",
-		"#803E75",
-		"#FF6800",
-		"#A6BDD7",
-		"#C10020",
-		"#CEA262",
-		"#817066",
-		"#007D34",
-		"#F6768E",
-		"#00538A",
-		"#FF7A5C",
-		"#53377A",
-		"#FF8E00",
-		"#B32851",
-		"#F4C800",
-		"#7F180D",
-		"#93AA00",
-		"#593315",
-		"#F13A13",
-		"#232C16",
-	]
-
-	for label, color in zip(data["label"].unique(), colors):
-	    mask = data["label"] == label
-	    pl.scatter(data[mask]["a"], data[mask]["b"], c=color, label=label, marker="s", s=[20] * len(data[mask]["a"]))
-	pl.legend()
-	pl.show()
+    for label, color in zip(data["label"].unique(), colors):
+        mask = data["label"] == label
+        pl.scatter(data[mask]["a"], data[mask]["b"], c=color, label=label, marker="s", s=[20] * len(data[mask]["a"]))
+    pl.legend()
+    pl.show()
 
 
 if __name__ == "__main__":
-	for i in range(1, 25):
-		get_reduced_dataset(i).to_csv("reduced_images/images_{}_components.csv".format(i), index = False)
-		print "finished getting reduced dataset with {} dimensions".format(i)
+    # for i in range(1, 25):
+    #     get_reduced_dataset(sklearn.decomposition.RandomizedPCA, n_components=i).to_csv("data/reduced_images/Randomized_PCA/{}_components.csv".format(i), index = False)
+    #     print "finished getting reduced dataset with {} dimensions".format(i)
+
+    for i in range(1,10):
+        get_reduced_dataset(sklearn.decomposition.PCA, n_components=i).to_csv("data/reduced_images/PCA/{}_components.csv".format(i), index = False)
+        print "finished getting reduced dataset with {} dimensions".format(i)    
+
+    # get_non_reduced_dataset().to_csv("data/unreduced_images.csv", index = False)
