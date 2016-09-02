@@ -141,8 +141,12 @@ if __name__ == "__main__":
     #     get_reduced_dataset(sklearn.decomposition.RandomizedPCA, n_components=i).to_csv("data/reduced_images/Randomized_PCA/{}_components.csv".format(i), index = False)
     #     print "finished getting reduced dataset with {} dimensions".format(i)
 
-    for i in range(1,10):
+    for i in range(20, 25):
         get_reduced_dataset(sklearn.decomposition.PCA, n_components=i).to_csv("data/reduced_images/PCA/{}_components.csv".format(i), index = False)
-        print "finished getting reduced dataset with {} dimensions".format(i)    
+        print "finished getting reduced dataset with {} dimensions".format(i)
+
+    # for i in range(1, 5):
+    #     get_reduced_dataset(sklearn.decomposition.NMF, n_components=i, random_state=0).to_csv("data/reduced_images/NMF/{}_components.csv")
+    #     print "finished getting reduced dataset (with NMF) with {} dimensions".format(i)
 
     # get_non_reduced_dataset().to_csv("data/unreduced_images.csv", index = False)

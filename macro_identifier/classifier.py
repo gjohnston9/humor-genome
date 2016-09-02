@@ -51,6 +51,7 @@ def cross_validate_knn_unreduced(k_range, verbose = False):
 
 
 def cross_validate_knn_reduced(k_range, n_components_range, path, verbose = False):
+	decomp_name = path.split("/")[-1]
 	for k in k_range:
 		all_scores = []
 		for i in n_components_range:
@@ -70,8 +71,6 @@ def cross_validate_knn_reduced(k_range, n_components_range, path, verbose = Fals
 			# print "Confusion matrix:\n{}".format(metrics.confusion_matrix(y_test, predicted))
 			# print "accuracy: {}".format(metrics.accuracy_score(y_test, predicted))
 
-			# embed()
-
 			scores = cross_val_score(KNeighborsClassifier(n_neighbors = k), samples, targets, cv = 5)
 			avg = sum(scores) / len (scores)
 
@@ -86,16 +85,18 @@ def cross_validate_knn_reduced(k_range, n_components_range, path, verbose = Fals
 
 	pl.xlabel("number of components")
 	pl.ylabel("average accuracy during cross validation")
-	pl.title("number of components vs. cross validation accuracy")
+	pl.title("\nnumber of components \n (reduced from original dataset using {}) \n vs. cross validation accuracy".format(decomp_name))
 	pl.legend()
 	pl.grid()
 
-	with PdfPages("results/KNN-{}.pdf".format(path.split("/")[-1])) as pdf:
+	with PdfPages("results/KNN-{}.pdf".format(decomp_name)) as pdf:
 		pdf.savefig()
 
-	pl.show()	
+	# pl.show()
+
+	pl.clf()
 
 if __name__ == "__main__":
-	# cross_validate_knn_reduced(range(1,7), range(1,25), "data/reduced_images/Randomized_PCA", verbose = True)
-	cross_validate_knn_reduced(range(1,7), range(1,10), "data/reduced_images/PCA", verbose = True)
+	cross_validate_knn_reduced(range(1,7), range(1,25), "data/reduced_images/Randomized_PCA", verbose = False)
+	cross_validate_knn_reduced(range(1,7), range(1,25), "data/reduced_images/PCA", verbose = False)
 	# cross_validate_knn_unreduced(range(1,7), verbose = True) # don't try to do this on laptop...
