@@ -43,6 +43,7 @@ def flatten_image(img):
 def get_non_reduced_dataset(n = None):
     """
     transform the images for use with a classifier, but don't apply any dimensionality reduction
+    if n is specified, only the first n images will be transformed and added to the returned dataframe
     """
     img_dir = "data/images/"
     images = [img_dir + f for f in os.listdir(img_dir)][:n]
@@ -137,13 +138,13 @@ def plot_2d():
 
 
 if __name__ == "__main__":
-    # for i in range(1, 25):
-    #     get_reduced_dataset(sklearn.decomposition.RandomizedPCA, n_components=i).to_csv("data/reduced_images/Randomized_PCA/{}_components.csv".format(i), index = False)
-    #     print "finished getting reduced dataset with {} dimensions".format(i)
-
-    for i in range(20, 25):
-        get_reduced_dataset(sklearn.decomposition.PCA, n_components=i).to_csv("data/reduced_images/PCA/{}_components.csv".format(i), index = False)
+    for i in range(27, 29):
+        get_reduced_dataset(sklearn.decomposition.RandomizedPCA, n_components=i).to_csv("data/reduced_images/Randomized_PCA/{}_components.csv".format(i), index = False)
         print "finished getting reduced dataset with {} dimensions".format(i)
+
+    # for i in range(20, 25):
+    #     get_reduced_dataset(sklearn.decomposition.PCA, n_components=i).to_csv("data/reduced_images/PCA/{}_components.csv".format(i), index = False)
+    #     print "finished getting reduced dataset with {} dimensions".format(i)
 
     # for i in range(1, 5):
     #     get_reduced_dataset(sklearn.decomposition.NMF, n_components=i, random_state=0).to_csv("data/reduced_images/NMF/{}_components.csv")
