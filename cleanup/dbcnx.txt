@@ -1,0 +1,1 @@
+mysql -u hgptestuser -h humor2.vip.gatech.edu -p humorgenometest
