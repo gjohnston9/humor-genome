@@ -18,7 +18,7 @@ def strip_tags(html):
     return s.get_data()
 
 with open("all_dirty.csv", "rb") as input_csv, open("all_cleaned.csv", "wb") as output_csv:
-    csv_reader = csv.reader(input_csv, delimiter="\t", encoding="utf-8")
+    csv_reader = csv.reader(input_csv, delimiter="\t")
     csv_writer = csv.writer(output_csv, delimiter="\t", encoding="utf-8")
     h = HTMLParser()
     first = True
