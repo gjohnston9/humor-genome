@@ -1,4 +1,4 @@
-SELECT jokecategory_name, COUNT(*) as count
+SELECT jokecategory_name, jc.jokecategory_id, COUNT(*) as count
 FROM JokeCategories as jc
 LEFT JOIN Joke2Categories as j2c
 ON jc.jokecategory_id=j2c.jokecategory_id
