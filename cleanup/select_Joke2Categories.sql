@@ -1,0 +1,1 @@
+SELECT * FROM Joke2Categories;
