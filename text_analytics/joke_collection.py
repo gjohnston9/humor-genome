@@ -55,7 +55,8 @@ class JokeCollection:
 		"""
 		remove punctuation from unicode string
 		"""
-		return re.sub(ur"\p{P}+", "", text)
+		return re.sub(ur"\p{P}+", " ", text) # contained in stopwords list are terms like "wouldn", so replacing
+		# punctuation with spaces allows for removal of things like this
 
 
 	def idf(self, term):
