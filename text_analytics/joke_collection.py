@@ -4,7 +4,7 @@ import regex as re
 from collections import Counter
 import errno
 from heapq import nlargest
-from math import log
+from math import log, sqrt
 import os
 import shutil
 import sys
@@ -66,7 +66,7 @@ class JokeCollection:
 		return idf
 
 
-	def max_tf_idf_by_category(self, n=10):
+	def max_tf_idf_by_category(self, n=10, debug=False):
 		"""
 		return a dictionary mapping each category in the collection to the words that
 		1) frequently appear in jokes in this category, and
@@ -77,15 +77,23 @@ class JokeCollection:
 		for category in self._categories:
 			if category == "":
 				continue
-			all_jokes = " ".join(joke["content"] for joke in self._jokes if category in joke["categories"])
-			all_jokes = self.remove_punctuation(all_jokes.lower())
-			words_counter = Counter(all_jokes.split())
+			if debug:
+				print "beginning max_tf_idf_by_category for {}".format(category)
 
 			# use of stopwords really shouldn't be necessary since we're using a version of tf-idf
 			# TODO: look at results of 1) using more jokes, or 2) changing idf weighting
 			# https://en.wikipedia.org/wiki/Tf%E2%80%93idf#Inverse_document_frequency_2
 			stopwords_list = stopwords.words("english")
-			all_words = filter(lambda word: word.isalpha() and word not in stopwords_list, set(all_jokes.split()))
+
+			words_counter = Counter() # maps each word to the sum of the square roots of the number of occurrences
+			# of the word in each joke in this category
+			all_words = set() # set of all words in jokes in this category
+
+			for joke in self.get_jokes(category):
+				content = self.remove_punctuation(joke["content"].lower()).split()
+				all_words.update(filter(lambda word: word.isalpha() and word not in stopwords_list, content)) # add any words not seen yet
+				counts = Counter(content)
+				words_counter += Counter({word : sqrt(counts[word]) for word in counts})
 
 			ret[category] = nlargest(n, all_words, key=lambda word: words_counter[word] * self.idf(word))
 		return ret
