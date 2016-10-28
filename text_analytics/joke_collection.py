@@ -1,3 +1,4 @@
+from nltk.corpus import stopwords
 import regex as re
 
 from collections import Counter
@@ -78,10 +79,15 @@ class JokeCollection:
 				continue
 			all_jokes = " ".join(joke["content"] for joke in self._jokes if category in joke["categories"])
 			all_jokes = self.remove_punctuation(all_jokes.lower())
-
 			words_counter = Counter(all_jokes.split())
-			words = filter(lambda word: word.isalpha(), set(all_jokes.split()))
-			ret[category] = nlargest(n, words, key=lambda word: words_counter[word] * self.idf(word))
+
+			# use of stopwords really shouldn't be necessary since we're using a version of tf-idf
+			# TODO: look at results of 1) using more jokes, or 2) changing idf weighting
+			# https://en.wikipedia.org/wiki/Tf%E2%80%93idf#Inverse_document_frequency_2
+			stopwords_list = stopwords.words("english")
+			all_words = filter(lambda word: word.isalpha() and word not in stopwords_list, set(all_jokes.split()))
+
+			ret[category] = nlargest(n, all_words, key=lambda word: words_counter[word] * self.idf(word))
 		return ret
 
 
