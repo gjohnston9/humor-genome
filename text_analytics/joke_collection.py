@@ -120,7 +120,7 @@ class JokeCollection:
 		if not os.path.exists(directory):
 			os.makedirs(directory)
 		elif overwrite:
-			print "{}: directory exists. overwriting."
+			print "{}: directory exists. overwriting.".format(directory)
 			shutil.rmtree(directory)
 			os.makedirs(directory)
 		else:
@@ -129,4 +129,7 @@ class JokeCollection:
 		for category in self._categories:
 			filename = category.replace(" ", "_").replace("/", "_") + ".txt"
 			with open(os.path.join(directory, filename), "w") as f:
+				# first line contains number of jokes that belong to this category
+				f.write(str(self._categories[category]))
 				f.write("\n\n~~~~\n\n".join(joke["content"].encode("utf-8") for joke in self.get_jokes(category)))
+		print "{}: finished writing".format(directory)
