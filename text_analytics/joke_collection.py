@@ -44,8 +44,10 @@ class JokeCollection:
 			# TODO: possibly stemming??
 			joke["word_counts"] = Counter(self.remove_punctuation(joke["content"].lower()).split())
 
-		self._categories = set.union(*(set(joke["categories"])
-			for joke in self._jokes)) # set of all distinct categories of jokes in self._jokes
+		self._categories = {}
+		for joke in self._jokes:
+			for category in joke["categories"]:
+				self._categories[category] = self._categories.get(category, 0) + 1
 
 
 	@staticmethod
