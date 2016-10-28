@@ -1,3 +1,5 @@
+import regex as re
+
 from collections import Counter
 import errno
 from heapq import nlargest
@@ -5,11 +7,15 @@ from math import log
 import os
 import shutil
 import sys
-
+import string
 
 class JokeCollection:
 	"""
-	based on nltk.text.TextCollection 
+	based on nltk.text.TextCollection.
+	has methods for analysis of jokes/categories, and for display of jokes/categories.
+	in the methods for analysis, it's important not to transform the actual self._jokes variable (i.e. removing
+		punctuation, stop words, changing to lower case) because of the methods that display the jokes.
+	TODO: maybe split this functionality into two different classes?
 	"""
 	def __init__(self, jokes):
 		"""
@@ -34,10 +40,19 @@ class JokeCollection:
 
 			# to avoid repeatedly calling joke.count(term)
 			# TODO: would using nltk tokenization change anything here?
-			joke["word_counts"] = Counter(joke["content"].lower().split())
+			# TODO: possibly stemming??
+			joke["word_counts"] = Counter(self.remove_punctuation(joke["content"].lower()).split())
 
 		self._categories = set.union(*(set(joke["categories"])
 			for joke in self._jokes)) # set of all distinct categories of jokes in self._jokes
+
+
+	@staticmethod
+	def remove_punctuation(text):
+		"""
+		remove punctuation from unicode string
+		"""
+		return re.sub(ur"\p{P}+", "", text)
 
 
 	def idf(self, term):
@@ -61,7 +76,9 @@ class JokeCollection:
 		for category in self._categories:
 			if category == "":
 				continue
-			all_jokes = " ".join(joke["content"] for joke in self._jokes if category in joke["categories"]).lower()
+			all_jokes = " ".join(joke["content"] for joke in self._jokes if category in joke["categories"])
+			all_jokes = self.remove_punctuation(all_jokes.lower())
+
 			words_counter = Counter(all_jokes.split())
 			words = filter(lambda word: word.isalpha(), set(all_jokes.split()))
 			ret[category] = nlargest(n, words, key=lambda word: words_counter[word] * self.idf(word))
