@@ -3,12 +3,15 @@ from joke_collection import JokeCollection
 import pymongo
 
 connection_string = "mongodb://localhost:27018"
+num_jokes = 1000
+top_n_terms = 10
 
 with pymongo.MongoClient(connection_string) as client:
+	print "connected to {}".format(connection_string)
 	db = client.hgp_jokerz
 	collection = db.JokesCleaned
 
-	jokes = collection.find().limit(1000)
+	jokes = collection.find().limit(num_jokes)
 	jokes_collection = JokeCollection(jokes)
-	# jokes_collection.write_jokes("first_1000_jokes")
-	print jokes_collection.max_tf_idf_by_category(n=10)
+	for category, terms in jokes_collection.max_tf_idf_by_category(n=top_n_terms, debug=True).items():
+		print "{}: {}".format(category, terms)
