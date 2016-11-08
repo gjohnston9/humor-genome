@@ -33,6 +33,7 @@ class JokeCollection:
 		"""
 		self._jokes = tuple(jokes) # in case a generator is passed in
 		self._idf_cache = {}
+		self._words = set() # all words across all jokes in the collection
 
 		for joke in self._jokes:
 			if joke["categories"] == None:
@@ -42,25 +43,15 @@ class JokeCollection:
 				# TODO: modify jokes in database so that categories is an array rather than a string
 				joke["categories"] = joke["categories"].split(",")
 
+			joke_words = self.remove_punctuation(joke["content"]).lower().split()
 			# to avoid repeatedly calling joke.count(term)
-			# TODO: would using nltk tokenization change anything here?
-			# TODO: possibly stemming??
-			joke["word_counts"] = Counter(self.remove_punctuation(joke["content"]).lower().split())
+			joke["word_counts"] = Counter(joke_words)
+			self._words.update(joke_words)
 
 		self._categories = {}
 		for joke in self._jokes:
 			for category in joke["categories"]:
 				self._categories[category] = self._categories.get(category, 0) + 1
-
-
-	def words(self):
-		"""
-		return a generator that will yield each word in each joke in the collection
-		"""
-		for joke in self._jokes:
-			joke_words = self.remove_punctuation(joke["content"]).lower().split()
-			for word in joke_words:
-				yield word
 
 
 	def get_BOW_featuresets(self, word_limit, joke_limit):
@@ -98,7 +89,6 @@ class JokeCollection:
 		if debug: print("finished training.")
 		# TODO: write separate method to create train and test set		
 		print("accuracy on test set: {}".format(nltk.classify.accuracy(classifier, test_set)))
-
 
 
 	@staticmethod
