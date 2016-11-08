@@ -8,6 +8,6 @@ Requirements
 
 Usage
 =====
-- make sure ssh connection is running (`ssh -L27018:localhost:27017 [your GT name]@[our project's Mongo server]`)
+- make sure ssh connection is running (`ssh -L27018:localhost:27017 [your GT name]@[our project's Mongo server]`), and make sure the connection_string in main.py is "mongodb://localhost:27018"
 - if you want, adjust `num_jokes` and `top_n_terms` parameters in main.py (increasing `num_jokes` will cause the program to take significantly more time to finish)
 - run `python main.py` from your terminal
