@@ -3,12 +3,12 @@ from joke_collection import JokeCollection
 import nltk
 import pymongo
 
-connection_string = "mongodb://localhost:27017"
+connection_string = "mongodb://localhost:27018"
 num_jokes = 10000
 top_n_terms = 10
 
 with pymongo.MongoClient(connection_string) as client:
-	print "connected to {}".format(connection_string)
+	print("connected to {}".format(connection_string))
 	db = client.hgp_jokerz
 	collection = db.JokesCleaned
 

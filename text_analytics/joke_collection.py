@@ -88,16 +88,16 @@ class JokeCollection:
 
 	def test_classifier(self, classifier_type, word_limit=2000, joke_limit=5000, train_test_split=0.8, debug=False): # i.e. nltk.NaiveBayesClassifier
 		train_test_size = int(joke_limit * train_test_split)
-		if debug: print "getting feature sets"
+		if debug: print("getting feature sets")
 		# TODO: give option to use different featureset
 		featuresets = tuple(self.get_BOW_featuresets(word_limit, joke_limit))
-		if debug: print "getting training and testing sets"
+		if debug: print("getting training and testing sets")
 		train_set, test_set = featuresets[:train_test_size], featuresets[train_test_size:]
-		if debug: print "training {} classifier".format(classifier_type)
+		if debug: print("training {} classifier".format(classifier_type))
 		classifier = classifier_type.train(train_set)
-		if debug: print "finished training."
+		if debug: print("finished training.")
 		# TODO: write separate method to create train and test set		
-		print "accuracy on test set: {}".format(nltk.classify.accuracy(classifier, test_set))
+		print("accuracy on test set: {}".format(nltk.classify.accuracy(classifier, test_set)))
 
 
 
@@ -106,7 +106,7 @@ class JokeCollection:
 		"""
 		remove punctuation from unicode string
 		"""
-		return re.sub(ur"\p{P}+", " ", text) # contained in stopwords list are terms like "wouldn", so replacing
+		return re.sub(r"\p{P}+", " ", text) # contained in stopwords list are terms like "wouldn", so replacing
 		# punctuation with spaces allows for removal of things like this
 
 
@@ -132,7 +132,7 @@ class JokeCollection:
 			if category == "":
 				continue
 			if debug:
-				print "beginning max_tf_idf_by_category for {}".format(category)
+				print("beginning max_tf_idf_by_category for {}".format(category))
 
 			# use of stopwords really shouldn't be necessary since we're using a version of tf-idf
 			# TODO: look at results of 1) using more jokes, or 2) changing idf weighting
@@ -171,7 +171,7 @@ class JokeCollection:
 		if not os.path.exists(directory):
 			os.makedirs(directory)
 		elif overwrite:
-			print "{}: directory exists. overwriting.".format(directory)
+			print("{}: directory exists. overwriting.".format(directory))
 			shutil.rmtree(directory)
 			os.makedirs(directory)
 		else:
@@ -183,4 +183,4 @@ class JokeCollection:
 				# first line contains number of jokes that belong to this category
 				f.write(str(self._categories[category]))
 				f.write("\n\n~~~~\n\n".join(joke["content"].encode("utf-8") for joke in self.get_jokes(category)))
-		print "{}: finished writing".format(directory)
+		print("{}: finished writing".format(directory))
