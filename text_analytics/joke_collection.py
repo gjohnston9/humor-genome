@@ -1,11 +1,14 @@
-from nltk.corpus import stopwords
+import nltk
 import regex as re
 
 from collections import Counter
 import errno
 from heapq import nlargest
+import itertools
 from math import log, sqrt
 import os
+import pdb
+import random
 import shutil
 import sys
 import string
@@ -42,12 +45,60 @@ class JokeCollection:
 			# to avoid repeatedly calling joke.count(term)
 			# TODO: would using nltk tokenization change anything here?
 			# TODO: possibly stemming??
-			joke["word_counts"] = Counter(self.remove_punctuation(joke["content"].lower()).split())
+			joke["word_counts"] = Counter(self.remove_punctuation(joke["content"]).lower().split())
 
 		self._categories = {}
 		for joke in self._jokes:
 			for category in joke["categories"]:
 				self._categories[category] = self._categories.get(category, 0) + 1
+
+
+	def words(self):
+		"""
+		return a generator that will yield each word in each joke in the collection
+		"""
+		for joke in self._jokes:
+			joke_words = self.remove_punctuation(joke["content"]).lower().split()
+			for word in joke_words:
+				yield word
+
+
+	def get_BOW_featuresets(self, word_limit, joke_limit):
+		# First make a set of all the words in all the jokes, then randomly
+		# sample (without replacement) the desired number of words.
+		# Need to make a set first in order to eliminate duplicates.
+		all_words = random.sample(set(self.words()), word_limit)
+		jokes_to_use = random.sample(self._jokes, joke_limit)
+		for joke in jokes_to_use:
+			if joke["categories"] == "": # skip jokes with no category
+				continue
+			preprocessed_joke = self.remove_punctuation(joke["content"]).lower().split()
+			# just use first category for now, since multicategory classification is a lot more complicated
+			yield (self.BOW_features(preprocessed_joke, all_words), joke["categories"][0])
+
+
+	@staticmethod
+	def BOW_features(preprocessed_joke, all_words):
+		features = {}
+		for word in all_words:
+			# added .encode("utf-8") to deal with UnicodeEncodeError
+			features["contains({})".format(word.encode("utf-8"))] = (word in preprocessed_joke)
+		return features
+
+
+	def test_classifier(self, classifier_type, word_limit=2000, joke_limit=5000, train_test_split=0.8, debug=False): # i.e. nltk.NaiveBayesClassifier
+		train_test_size = int(joke_limit * train_test_split)
+		if debug: print "getting feature sets"
+		# TODO: give option to use different featureset
+		featuresets = tuple(self.get_BOW_featuresets(word_limit, joke_limit))
+		if debug: print "getting training and testing sets"
+		train_set, test_set = featuresets[:train_test_size], featuresets[train_test_size:]
+		if debug: print "training {} classifier".format(classifier_type)
+		classifier = classifier_type.train(train_set)
+		if debug: print "finished training."
+		# TODO: write separate method to create train and test set		
+		print "accuracy on test set: {}".format(nltk.classify.accuracy(classifier, test_set))
+
 
 
 	@staticmethod
@@ -86,7 +137,7 @@ class JokeCollection:
 			# use of stopwords really shouldn't be necessary since we're using a version of tf-idf
 			# TODO: look at results of 1) using more jokes, or 2) changing idf weighting
 			# https://en.wikipedia.org/wiki/Tf%E2%80%93idf#Inverse_document_frequency_2
-			stopwords_list = stopwords.words("english")
+			stopwords_list = nltk.corpus.stopwords.words("english")
 
 			words_counter = Counter() # maps each word to the sum of the square roots of the number of occurrences
 			# of the word in each joke in this category
