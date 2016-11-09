@@ -2,4 +2,4 @@ migration/database.config
 migration/remote_database.config
 macro_identifier/data/unreduced_images.csv
 *.pyc
-__pycache__/
+__pycache__
