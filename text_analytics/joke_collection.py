@@ -33,7 +33,7 @@ class JokeCollection:
 		"""
 		self._jokes = tuple(jokes) # in case a generator is passed in
 		self._idf_cache = {}
-		self._words = set() # all words across all jokes in the collection
+		self._words = set()
 
 		for joke in self._jokes:
 			if joke["categories"] == None:
@@ -48,40 +48,59 @@ class JokeCollection:
 			joke["word_counts"] = Counter(joke_words)
 			self._words.update(joke_words)
 
+		# this will be a list in (essentially) random order, containing no duplicates,
+		# of all words across all jokes in the collection
+		self._words = list(self._words)
+
 		self._categories = {}
 		for joke in self._jokes:
 			for category in joke["categories"]:
 				self._categories[category] = self._categories.get(category, 0) + 1
 
 
-	def get_BOW_featuresets(self, word_limit, joke_limit):
-		# First make a set of all the words in all the jokes, then randomly
-		# sample (without replacement) the desired number of words.
-		# Need to make a set first in order to eliminate duplicates.
-		all_words = random.sample(set(self.words()), word_limit)
+	def get_all_featuresets(self, joke_limit, feature_extractor, **kwargs):
+		"""
+		get featureset for every joke in the collection (limited by joke_limit parameter)
+
+		parameters:
+			feature_extractor - function that will return the features of an individual joke
+			**kwargs 		  - use this to pass additional arguments to feature_extractor
+		"""
 		jokes_to_use = random.sample(self._jokes, joke_limit)
 		for joke in jokes_to_use:
 			if joke["categories"] == "": # skip jokes with no category
 				continue
 			preprocessed_joke = self.remove_punctuation(joke["content"]).lower().split()
-			# just use first category for now, since multicategory classification is a lot more complicated
-			yield (self.BOW_features(preprocessed_joke, all_words), joke["categories"][0])
+			yield (feature_extractor(preprocessed_joke, **kwargs), joke["categories"][0])
 
 
-	@staticmethod
-	def BOW_features(preprocessed_joke, all_words):
+	def BOW_feature_extractor(self, preprocessed_joke, word_limit=2000):
+		"""
+		return the bag-of-words featureset for a single joke
+		"""
 		features = {}
-		for word in all_words:
+		# don't use random.sample so that the words used will be consistent across all jokes
+		for word in self._words[:word_limit]:
 			# added .encode("utf-8") to deal with UnicodeEncodeError
 			features["contains({})".format(word.encode("utf-8"))] = (word in preprocessed_joke)
 		return features
 
 
-	def test_classifier(self, classifier_type, word_limit=2000, joke_limit=5000, train_test_split=0.8, debug=False): # i.e. nltk.NaiveBayesClassifier
+	def test_classifier(self, classifier_type, feature_extractor, joke_limit=5000, train_test_split=0.8, debug=False, **kwargs):
+		"""
+		train and test a classifier on the jokes in this collection
+
+		parameters:
+			classifier_type   - classifier to use, i.e. nltk.NaiveBayesClassifier
+			joke_limit 		  - number of jokes to use
+			train_test_split  - percentage of jokes to use in training set (0 < train_test_split < 1)
+			debug 			  - set this to True to print information about progress, etc. inside the function
+			feature_extractor - function that will return the features of an individual joke
+			**kwargs		  - use this to pass additional arguments to feature_extractor
+		"""
 		train_test_size = int(joke_limit * train_test_split)
 		if debug: print("getting feature sets")
-		# TODO: give option to use different featureset
-		featuresets = tuple(self.get_BOW_featuresets(word_limit, joke_limit))
+		featuresets = tuple(self.get_all_featuresets(joke_limit, feature_extractor, **kwargs))
 		if debug: print("getting training and testing sets")
 		train_set, test_set = featuresets[:train_test_size], featuresets[train_test_size:]
 		if debug: print("training {} classifier".format(classifier_type))
