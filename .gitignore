@@ -1,5 +1,6 @@
 migration/database.config
 migration/remote_database.config
 macro_identifier/data/unreduced_images.csv
+text_analytics/ssh.txt
 *.pyc
 __pycache__

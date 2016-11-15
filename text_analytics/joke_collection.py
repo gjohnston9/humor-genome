@@ -1,5 +1,6 @@
 import nltk
 import regex as re
+import sklearn.feature_extraction.text
 
 from collections import Counter
 import errno
@@ -86,12 +87,12 @@ class JokeCollection:
 		return features
 
 
-	def test_classifier(self, classifier_type, feature_extractor, joke_limit=5000, train_test_split=0.8, debug=False, **kwargs):
+	def test_classifiers(self, classifier_types, feature_extractor, joke_limit=5000, train_test_split=0.8, debug=False, **kwargs):
 		"""
 		train and test a classifier on the jokes in this collection
 
 		parameters:
-			classifier_type   - classifier to use, i.e. nltk.NaiveBayesClassifier
+			classifier_type   - an *iterable* of classifiers to use, i.e. [nltk.NaiveBayesClassifier]
 			joke_limit 		  - number of jokes to use
 			train_test_split  - percentage of jokes to use in training set (0 < train_test_split < 1)
 			debug 			  - set this to True to print information about progress, etc. inside the function
@@ -101,13 +102,15 @@ class JokeCollection:
 		train_test_size = int(joke_limit * train_test_split)
 		if debug: print("getting feature sets")
 		featuresets = tuple(self.get_all_featuresets(joke_limit, feature_extractor, **kwargs))
-		if debug: print("getting training and testing sets")
+		if debug: print("getting training set ({} items) and testing set ({} items)".format(
+			joke_limit * train_test_split, len(featuresets) - (joke_limit * train_test_split)))
 		train_set, test_set = featuresets[:train_test_size], featuresets[train_test_size:]
-		if debug: print("training {} classifier".format(classifier_type))
-		classifier = classifier_type.train(train_set)
-		if debug: print("finished training.")
-		# TODO: write separate method to create train and test set		
-		print("accuracy on test set: {}".format(nltk.classify.accuracy(classifier, test_set)))
+		for classifier_type in classifier_types:
+			if debug: print("training {} classifier".format(classifier_type))
+			classifier = classifier_type.train(train_set)
+			if debug: print("finished training.")
+			# TODO: write separate method to create train and test set		
+			print("accuracy on test set: {}".format(nltk.classify.accuracy(classifier, test_set)))
 
 
 	@staticmethod
