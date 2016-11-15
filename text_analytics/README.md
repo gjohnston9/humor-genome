@@ -5,6 +5,7 @@ Requirements
 - regex: `pip install regex`
 - nltk: `pip install nltk`
 - sshtunnel: `pip install sshtunnel`
+- scikit-learn: `pip install scikit-learn` (also required scipy and numpy, available through pip)
 - nltk stopwords corpus: Once you have nltk installed, run `python -c "import nltk; nltk.download()"` from your terminal, then click the "All Packages" tab at the top, scroll down to the Stopwords Corpus, and download it.
 
 Usage
