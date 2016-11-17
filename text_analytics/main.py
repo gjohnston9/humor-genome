@@ -2,7 +2,8 @@
 
 from joke_collection import JokeCollection
 
-import nltk
+import json
+from nltk.classify import NaiveBayesClassifier, MaxentClassifier, DecisionTreeClassifier
 import pymongo
 from sshtunnel import SSHTunnelForwarder
 
@@ -10,26 +11,27 @@ import argparse
 import contextlib
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--verbose", help="increase output verbosity", action="store_true")
+parser.add_argument("--quiet", help="decrease output verbosity", action="store_true")
 parser.add_argument("--ssh", help="while script is running, establish ssh connection, using the "
 	"parameters stored in ssh.txt", action="store_true")
-parser.add_argument("--port", help="connect to your Mongo database through the provided local port", type=int, required=True)
+parser.add_argument("--port", help="(required) connect to your Mongo database through the provided local port", type=int, required=True)
 args = parser.parse_args()
 
 connection_string = "mongodb://localhost:{}".format(args.port)
 
-num_jokes = 2000
+num_jokes = 5000
 top_n_terms = 10
 
 
 with contextlib.ExitStack() as stack: # gives the ability to use conditional context managers
 	if args.ssh:
 		# get ssh connection parameters
-		with open("ssh.txt", "r") as f:
-			host = f.readline().strip()
-			user = f.readline().strip()
-			pwd = f.readline().strip()
-		if args.verbose: print("opening ssh connection to {}".format(host))
+		with open("credentials.json", "r") as f:
+			data = json.load(f)
+			host = data["ssh"]["host"]
+			user = data["ssh"]["user"]
+			pwd = data["ssh"]["password"]
+		if not args.quiet: print("opening ssh connection to {}".format(host))
 		# establish ssh connection
 		ssh_conn = stack.enter_context(SSHTunnelForwarder(
 			host,
@@ -37,7 +39,7 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 			ssh_password=pwd,
 			local_bind_address=("0.0.0.0", args.port),
 			remote_bind_address=("127.0.0.1", 27017)))
-		if args.verbose: print("opened ssh connection")
+		if not args.quiet: print("opened ssh connection")
 
 	# establish mongo connection
 	client = stack.enter_context(pymongo.MongoClient(connection_string))
@@ -47,6 +49,11 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 
 	jokes = collection.find().limit(num_jokes)
 	jokes_collection = JokeCollection(jokes)
-	# for category, terms in jokes_collection.max_tf_idf_by_category(n=top_n_terms, debug=args.verbose).items():
-	# 	print("{}: {}".format(category, terms))
-	jokes_collection.test_classifier(nltk.NaiveBayesClassifier, jokes_collection.BOW_feature_extractor, debug=args.verbose)
+	for category, terms in jokes_collection.max_tf_idf_by_category(n=top_n_terms, debug=not args.quiet).items():
+		print("{}: {}".format(category, terms))
+	classifier_types = [
+		# MaxentClassifier,
+		NaiveBayesClassifier,
+		# DecisionTreeClassifier,
+		]
+	# jokes_collection.test_classifier(classifier_types, jokes_collection.BOW_feature_extractor, debug=not args.quiet)
