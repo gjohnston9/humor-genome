@@ -51,9 +51,27 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 	jokes_collection = JokeCollection(jokes)
 	for category, terms in jokes_collection.max_tf_idf_by_category(n=top_n_terms, debug=not args.quiet).items():
 		print("{}: {}".format(category, terms))
+
 	classifier_types = [
 		# MaxentClassifier,
 		NaiveBayesClassifier,
 		# DecisionTreeClassifier,
 		]
 	# jokes_collection.test_classifier(classifier_types, jokes_collection.BOW_feature_extractor, debug=not args.quiet)
+
+    #Auto Classification Demo
+    jokes = collection.find().limit(num_jokes)
+    categories = keywords.keys()
+    i = 1
+    while i <= 5:
+        print("\nExample " + str(i))
+        singlejoke = jokes.next()
+        print("Joke\n" + JokeCollection.remove_punctuation(singlejoke["content"]))
+        print("Existing Categories: " + singlejoke["categories"])
+        catSet = set()
+        for cat in categories:
+            for keyword in keywords[cat]:
+                if keyword in singlejoke["content"]:
+                    catSet.add(cat);
+        i = i + 1
+        print("Automatically classify: " + str(catSet))
