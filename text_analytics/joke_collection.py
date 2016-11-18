@@ -165,6 +165,25 @@ class JokeCollection:
 		return ret
 
 
+	def classify_demo(self, num_jokes, keywords=None, *args, **kwargs):
+		if keywords == None: # get keywords for each category, if they are not provided
+			keywords = self.max_tf_idf_by_category(*args, **kwargs)
+
+		jokes = random.sample(self._jokes, num_jokes)
+		categories = keywords.keys()
+
+		for i, singlejoke in enumerate(jokes):
+			print("\nExample " + str(i))
+			print("Joke\n" + JokeCollection.remove_punctuation(singlejoke["content"]))
+			print("Existing Categories: " + str(singlejoke["categories"]))
+			catSet = set()
+			for cat in categories:
+				for keyword in keywords[cat]:
+					if keyword in singlejoke["content"]:
+						catSet.add(cat);
+			print("Automatically classify: " + str(catSet))
+
+
 	def get_jokes(self, category):
 		"""
 		get all jokes in the collection belonging to the specified category
