@@ -19,7 +19,7 @@ args = parser.parse_args()
 
 connection_string = "mongodb://localhost:{}".format(args.port)
 
-num_jokes = 5000
+num_jokes = 7000
 top_n_terms = 10
 
 
@@ -50,15 +50,20 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 	jokes = collection.find().limit(num_jokes)
 	jokes_collection = JokeCollection(jokes)
 
-	keywords = jokes_collection.max_tf_idf_by_category(n=top_n_terms, debug=not args.quiet)
-	for category, terms in keywords.items():
-		print("{}: {}".format(category, terms))
+	# keywords = jokes_collection.max_tf_idf_by_category(n=top_n_terms, debug=not args.quiet)
+	# for category, terms in keywords.items():
+	# 	print("{}: {}".format(category, terms))
 
 	classifier_types = [
-		# MaxentClassifier,
 		NaiveBayesClassifier,
-		# DecisionTreeClassifier,
 		]
-	# jokes_collection.test_classifier(classifier_types, jokes_collection.BOW_feature_extractor, debug=not args.quiet)
 
-	jokes_collection.classify_demo(5, keywords)
+	# print("\n\nnltk - word count features:")
+	# jokes_collection.test_classifiers(classifier_types, jokes_collection.word_count_feature_extractor, debug=not args.quiet)
+
+	# print("\n\nnltk - bag of words (binary counts) features:")
+	# jokes_collection.test_classifiers(classifier_types, jokes_collection.BOW_feature_extractor, debug=not args.quiet)
+
+	jokes_collection.sklearn_test(debug=not args.quiet)
+
+	# jokes_collection.classify_demo(5, keywords)
