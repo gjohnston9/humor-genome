@@ -1,6 +1,8 @@
 import nltk
+import numpy as np
 import regex as re
 import sklearn.feature_extraction.text
+import sklearn.naive_bayes
 
 from collections import Counter
 import errno
@@ -38,7 +40,7 @@ class JokeCollection:
 
 		for joke in self._jokes:
 			if joke["categories"] == None:
-				joke["categories"] = ""
+				joke["categories"] = []
 			else:
 				# transform comma-separated string to array
 				# TODO: modify jokes in database so that categories is an array rather than a string
@@ -49,14 +51,23 @@ class JokeCollection:
 			joke["word_counts"] = Counter(joke_words)
 			self._words.update(joke_words)
 
-		# this will be a list in (essentially) random order, containing no duplicates,
-		# of all words across all jokes in the collection
+		# - this will be a list in (essentially) random order, containing no duplicates,
+		#   of all words across all jokes in the collection
+		# - used in feature extraction methods
 		self._words = list(self._words)
 
+		# this will map each category to the number of jokes belonging to that category
 		self._categories = {}
 		for joke in self._jokes:
 			for category in joke["categories"]:
 				self._categories[category] = self._categories.get(category, 0) + 1
+
+		# - 1-1 mapping between categories and their associated IDs
+		# - np.array of strings requires that each string be the same length, so use category IDs instead
+		self._categoryIDs = {}
+		for index, category in enumerate(self._categories):
+			self._categoryIDs[category] = index
+			self._categoryIDs[index] = category
 
 
 	def get_all_featuresets(self, joke_limit, feature_extractor, **kwargs):
@@ -69,7 +80,7 @@ class JokeCollection:
 		"""
 		jokes_to_use = random.sample(self._jokes, joke_limit)
 		for joke in jokes_to_use:
-			if joke["categories"] == "": # skip jokes with no category
+			if joke["categories"] == []: # skip jokes with no category
 				continue
 			preprocessed_joke = self.remove_punctuation(joke["content"]).lower().split()
 			yield (feature_extractor(preprocessed_joke, **kwargs), joke["categories"][0])
@@ -87,6 +98,48 @@ class JokeCollection:
 		return features
 
 
+	def word_count_feature_extractor(self, preprocessed_joke, word_limit=2000):
+		"""
+		return the bag-of-words featureset for a single joke
+		"""
+		features = {}
+		# don't use random.sample so that the words used will be consistent across all jokes
+		for word in self._words[:word_limit]:
+			# added .encode("utf-8") to deal with UnicodeEncodeError
+			features["contains({})".format(word.encode("utf-8"))] = preprocessed_joke.count(word)
+		return features
+
+
+	def sklearn_test(self, train_test_split=0.8, joke_limit=5000, debug=False):
+		train_size = int(joke_limit * train_test_split)
+		if debug: print("getting training set ({} items) and testing set ({} items)".format(
+			train_size, joke_limit - train_size))
+
+		# get random sample of jokes where joke["categories"] isn't empty
+		jokes_to_use = random.sample(list(filter(lambda joke: joke["categories"], self._jokes)), joke_limit)
+
+		train_set, test_set = jokes_to_use[:train_size], jokes_to_use[train_size:]
+
+		# pdb.set_trace()
+
+		train_set_target = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in train_set), np.int8)
+		test_set_target = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in test_set), np.int8)
+
+		tokenizer_pattern = r"\b\w+\b" # tokenize string by extracting words of at least 1 letter
+		vectorizer = sklearn.feature_extraction.text.CountVectorizer(input="content", analyzer=u"word",
+			token_pattern=tokenizer_pattern) # TODO: test naive bayes with binary counts
+		vectorizer.fit(joke["content"] for joke in self._jokes)
+		# pdb.set_trace()
+
+		X_train = vectorizer.transform(joke["content"] for joke in train_set)
+		X_test = vectorizer.transform(joke["content"] for joke in test_set)
+
+		clf = sklearn.naive_bayes.MultinomialNB()
+		clf.fit(X_train, train_set_target)
+
+		print(clf.score(X_test, test_set_target))
+
+
 	def test_classifiers(self, classifier_types, feature_extractor, joke_limit=5000, train_test_split=0.8, debug=False, **kwargs):
 		"""
 		train and test a classifier on the jokes in this collection
@@ -99,12 +152,12 @@ class JokeCollection:
 			feature_extractor - function that will return the features of an individual joke
 			**kwargs		  - use this to pass additional arguments to feature_extractor
 		"""
-		train_test_size = int(joke_limit * train_test_split)
+		train_size = int(joke_limit * train_test_split)
 		if debug: print("getting feature sets")
 		featuresets = tuple(self.get_all_featuresets(joke_limit, feature_extractor, **kwargs))
 		if debug: print("getting training set ({} items) and testing set ({} items)".format(
-			joke_limit * train_test_split, len(featuresets) - (joke_limit * train_test_split)))
-		train_set, test_set = featuresets[:train_test_size], featuresets[train_test_size:]
+			train_size, joke_limit - train_size))
+		train_set, test_set = featuresets[:train_size], featuresets[train_size:]
 		for classifier_type in classifier_types:
 			if debug: print("training {} classifier".format(classifier_type))
 			classifier = classifier_type.train(train_set)
@@ -120,6 +173,11 @@ class JokeCollection:
 		"""
 		return re.sub(r"\p{P}+", " ", text) # contained in stopwords list are terms like "wouldn", so replacing
 		# punctuation with spaces allows for removal of things like this
+
+
+	@staticmethod
+	def joke_preprocess(joke_text):
+		return JokeCollection.remove_punctuation(joke_text.lower())
 
 
 	def idf(self, term):
