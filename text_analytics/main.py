@@ -19,7 +19,7 @@ args = parser.parse_args()
 
 connection_string = "mongodb://localhost:{}".format(args.port)
 
-num_jokes = 7000
+num_jokes = 11000
 top_n_terms = 10
 
 
@@ -64,6 +64,6 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 	# print("\n\nnltk - bag of words (binary counts) features:")
 	# jokes_collection.test_classifiers(classifier_types, jokes_collection.BOW_feature_extractor, debug=not args.quiet)
 
-	jokes_collection.sklearn_test(debug=not args.quiet)
+	jokes_collection.sklearn_test(debug=not args.quiet, vectorize="count", joke_limit=num_jokes-1000)
 
 	# jokes_collection.classify_demo(5, keywords)

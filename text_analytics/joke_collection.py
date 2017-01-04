@@ -110,7 +110,7 @@ class JokeCollection:
 		return features
 
 
-	def sklearn_test(self, train_test_split=0.8, joke_limit=5000, debug=False):
+	def sklearn_test(self, train_test_split=0.8, joke_limit=5000, debug=False, vectorize="count"):
 		train_size = int(joke_limit * train_test_split)
 		if debug: print("getting training set ({} items) and testing set ({} items)".format(
 			train_size, joke_limit - train_size))
@@ -120,16 +120,32 @@ class JokeCollection:
 
 		train_set, test_set = jokes_to_use[:train_size], jokes_to_use[train_size:]
 
-		# pdb.set_trace()
-
 		train_set_target = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in train_set), np.int8)
 		test_set_target = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in test_set), np.int8)
 
 		tokenizer_pattern = r"\b\w+\b" # tokenize string by extracting words of at least 1 letter
-		vectorizer = sklearn.feature_extraction.text.CountVectorizer(input="content", analyzer=u"word",
-			token_pattern=tokenizer_pattern) # TODO: test naive bayes with binary counts
+
+		if vectorize == "count":
+			vectorizer_type = sklearn.feature_extraction.text.CountVectorizer
+			if debug:
+				print("using CountVectorizer")
+		elif vectorize == "tfidf":
+			vectorizer_type = sklearn.feature_extraction.text.TfidfVectorizer
+			if debug:
+				print("using TfidfVectorizer")
+		else:
+			print("vectorizer type not recognized")
+			return
+
+		vectorizer = vectorizer_type(
+				input="content",
+				analyzer=u"word",
+				token_pattern=tokenizer_pattern,
+				ngram_range=(1,1),
+				binary=False,
+			)
+
 		vectorizer.fit(joke["content"] for joke in self._jokes)
-		# pdb.set_trace()
 
 		X_train = vectorizer.transform(joke["content"] for joke in train_set)
 		X_test = vectorizer.transform(joke["content"] for joke in test_set)
