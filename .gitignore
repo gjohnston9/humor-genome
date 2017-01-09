@@ -1,5 +1,6 @@
 migration/database.config
 migration/remote_database.config
+cleanup/dbcnx.txt
 macro_identifier/data/unreduced_images.csv
 text_analytics/credentials.json
 *.pyc
