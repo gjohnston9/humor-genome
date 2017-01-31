@@ -3,6 +3,9 @@ import numpy as np
 import regex as re
 import sklearn.feature_extraction.text
 import sklearn.naive_bayes
+import sklearn.cross_validation
+import sklearn.pipeline
+import sklearn.metrics
 
 from collections import Counter
 import errno
@@ -70,6 +73,99 @@ class JokeCollection:
 			self._categoryIDs[index] = category
 
 
+	def sklearn_pipeline(self, train_proportion=0.8, joke_limit=5000, debug=False):
+		test_proportion = 1 - train_proportion
+
+		### get random sample of jokes where joke["categories"] isn't empty
+		jokes_to_use = random.sample(list(filter(lambda joke: joke["categories"], self._jokes)), joke_limit)
+
+		### create CountVectorizer
+		vectorizer = sklearn.feature_extraction.text.CountVectorizer(
+			input="content",
+			analyzer=u"word",
+			token_pattern=r"\b\w+\b", # tokenize string by extracting words of at least 1 letter. I think default is r"\b\w{2,}\b"
+			ngram_range=(1,1), # TODO: experiment with this
+			binary=False,
+		)
+
+		### create data and target vectors
+		X = vectorizer.fit_transform(joke["content"] for joke in jokes_to_use)
+		y = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in jokes_to_use), np.int8)
+
+		X_train, X_test, y_train, y_test = sklearn.cross_validation.train_test_split(X, y, test_size=test_proportion)
+
+		### setting up pipeline. feel free to experiment here
+		select = sklearn.feature_selection.SelectKBest(k=100)
+		clf = sklearn.naive_bayes.MultinomialNB()
+		steps = [("feature_selection", select),
+		        ("naive_bayes", clf)]
+
+		pipeline = sklearn.pipeline.Pipeline(steps)
+
+		### fit your pipeline on X_train and y_train
+		pipeline.fit(X_train, y_train)
+		### call pipeline.predict() on your X_test data to make a set of test predictions
+		y_prediction = pipeline.predict(X_test)
+		### test your predictions using sklearn.classification_report()
+		report = sklearn.metrics.classification_report(y_test, y_prediction)
+		### and print the report
+		print(report)
+		print("overall accuracy: {:.2f}%".format(sklearn.metrics.accuracy_score(y_test, y_prediction) * 100))
+		print()
+		for index, category in enumerate(self._categories):
+			print("{}: {} ({} jokes)".format(index, category, self._categories[category]))
+
+
+	def get_jokes(self, category):
+		"""
+		get all jokes in the collection belonging to the specified category
+		"""
+		return (joke for joke in self._jokes if category in joke["categories"])
+
+
+	def write_jokes(self, directory, overwrite=False):
+		"""
+		- create a directory with the specified name (if such a directory already exists, raise an exception if
+		overwrite argument is False, otherwise erase the directory and then create it)
+		- then for each category, create a text file in the directory, containing all jokes
+		belonging to that category (there will be overlap between files since there are many jokes that belong
+		to multiple categories)
+		"""
+		if not os.path.exists(directory):
+			os.makedirs(directory)
+		elif overwrite:
+			print("{}: directory exists. overwriting.".format(directory))
+			shutil.rmtree(directory)
+			os.makedirs(directory)
+		else:
+			raise Exception("{}: directory already exists.".format(directory))
+
+		for category in self._categories:
+			filename = category.replace(" ", "_").replace("/", "_") + ".txt"
+			with open(os.path.join(directory, filename), "w") as f:
+				# first line contains number of jokes that belong to this category
+				f.write(str(self._categories[category]))
+				f.write("\n\n~~~~\n\n".join(joke["content"].encode("utf-8") for joke in self.get_jokes(category)))
+		print("{}: finished writing".format(directory))
+
+
+
+
+
+
+
+
+
+
+
+	"""
+	The below methods were used for classification with NLTK (http://www.nltk.org/).
+
+	Scikit-learn is now the main library used for classification (much faster and provides more options),
+	and it includes a lot of built-in preprocessing methods. So the below methods are not really useful.
+	"""
+
+
 	def get_all_featuresets(self, joke_limit, feature_extractor, **kwargs):
 		"""
 		get featureset for every joke in the collection (limited by joke_limit parameter)
@@ -108,52 +204,6 @@ class JokeCollection:
 			# added .encode("utf-8") to deal with UnicodeEncodeError
 			features["contains({})".format(word.encode("utf-8"))] = preprocessed_joke.count(word)
 		return features
-
-
-	def sklearn_test(self, train_test_split=0.8, joke_limit=5000, debug=False, vectorize="count"):
-		train_size = int(joke_limit * train_test_split)
-		if debug: print("getting training set ({} items) and testing set ({} items)".format(
-			train_size, joke_limit - train_size))
-
-		# get random sample of jokes where joke["categories"] isn't empty
-		jokes_to_use = random.sample(list(filter(lambda joke: joke["categories"], self._jokes)), joke_limit)
-
-		train_set, test_set = jokes_to_use[:train_size], jokes_to_use[train_size:]
-
-		train_set_target = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in train_set), np.int8)
-		test_set_target = np.fromiter((self._categoryIDs[joke["categories"][0]] for joke in test_set), np.int8)
-
-		tokenizer_pattern = r"\b\w+\b" # tokenize string by extracting words of at least 1 letter
-
-		if vectorize == "count":
-			vectorizer_type = sklearn.feature_extraction.text.CountVectorizer
-			if debug:
-				print("using CountVectorizer")
-		elif vectorize == "tfidf":
-			vectorizer_type = sklearn.feature_extraction.text.TfidfVectorizer
-			if debug:
-				print("using TfidfVectorizer")
-		else:
-			print("vectorizer type not recognized")
-			return
-
-		vectorizer = vectorizer_type(
-				input="content",
-				analyzer=u"word",
-				token_pattern=tokenizer_pattern,
-				ngram_range=(1,1),
-				binary=False,
-			)
-
-		vectorizer.fit(joke["content"] for joke in self._jokes)
-
-		X_train = vectorizer.transform(joke["content"] for joke in train_set)
-		X_test = vectorizer.transform(joke["content"] for joke in test_set)
-
-		clf = sklearn.naive_bayes.MultinomialNB()
-		clf.fit(X_train, train_set_target)
-
-		print(clf.score(X_test, test_set_target))
 
 
 	def test_classifiers(self, classifier_types, feature_extractor, joke_limit=5000, train_test_split=0.8, debug=False, **kwargs):
@@ -256,36 +306,3 @@ class JokeCollection:
 					if keyword in singlejoke["content"]:
 						catSet.add(cat);
 			print("Automatically classify: " + str(catSet))
-
-
-	def get_jokes(self, category):
-		"""
-		get all jokes in the collection belonging to the specified category
-		"""
-		return (joke for joke in self._jokes if category in joke["categories"])
-
-
-	def write_jokes(self, directory, overwrite=False):
-		"""
-		- create a directory with the specified name (if such a directory already exists, raise an exception if
-		overwrite argument is False, otherwise erase the directory and then create it)
-		- then for each category, create a text file in the directory, containing all jokes
-		belonging to that category (there will be overlap between files since there are many jokes that belong
-		to multiple categories)
-		"""
-		if not os.path.exists(directory):
-			os.makedirs(directory)
-		elif overwrite:
-			print("{}: directory exists. overwriting.".format(directory))
-			shutil.rmtree(directory)
-			os.makedirs(directory)
-		else:
-			raise Exception("{}: directory already exists.".format(directory))
-
-		for category in self._categories:
-			filename = category.replace(" ", "_").replace("/", "_") + ".txt"
-			with open(os.path.join(directory, filename), "w") as f:
-				# first line contains number of jokes that belong to this category
-				f.write(str(self._categories[category]))
-				f.write("\n\n~~~~\n\n".join(joke["content"].encode("utf-8") for joke in self.get_jokes(category)))
-		print("{}: finished writing".format(directory))

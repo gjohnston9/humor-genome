@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--quiet", help="decrease output verbosity", action="store_true")
 parser.add_argument("--ssh", help="while script is running, establish ssh connection, using the "
 	"parameters stored in ssh.txt", action="store_true")
-parser.add_argument("--port", help="(required) connect to your Mongo database through the provided local port", type=int, required=True)
+parser.add_argument("--port", help="(required) connect to your Mongo database through the provided local port", type=int, default=27017)
 args = parser.parse_args()
 
 connection_string = "mongodb://localhost:{}".format(args.port)
@@ -54,16 +54,4 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 	# for category, terms in keywords.items():
 	# 	print("{}: {}".format(category, terms))
 
-	classifier_types = [
-		NaiveBayesClassifier,
-		]
-
-	# print("\n\nnltk - word count features:")
-	# jokes_collection.test_classifiers(classifier_types, jokes_collection.word_count_feature_extractor, debug=not args.quiet)
-
-	# print("\n\nnltk - bag of words (binary counts) features:")
-	# jokes_collection.test_classifiers(classifier_types, jokes_collection.BOW_feature_extractor, debug=not args.quiet)
-
-	jokes_collection.sklearn_test(debug=not args.quiet, vectorize="count", joke_limit=num_jokes-1000)
-
-	# jokes_collection.classify_demo(5, keywords)
+	jokes_collection.sklearn_pipeline(debug=not args.quiet, joke_limit=num_jokes-1000)
