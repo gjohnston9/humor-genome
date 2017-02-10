@@ -3,5 +3,7 @@ migration/remote_database.config
 cleanup/dbcnx.txt
 macro_identifier/data/unreduced_images.csv
 text_analytics/credentials.json
+text_analytics/Jokerz_credentials.json
 *.pyc
+*.csv
 __pycache__
