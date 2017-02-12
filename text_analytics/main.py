@@ -54,4 +54,8 @@ with contextlib.ExitStack() as stack: # gives the ability to use conditional con
 	# for category, terms in keywords.items():
 	# 	print("{}: {}".format(category, terms))
 
-	jokes_collection.sklearn_pipeline(debug=not args.quiet, joke_limit=num_jokes-1000)
+	# jokes_collection.sklearn_pipeline(debug=not args.quiet, joke_limit=num_jokes-1000)
+	new_jokes = jokes_collection.joke_generator(2)
+	for _ in range(3):
+		print(next(new_jokes))
+		print("\n")

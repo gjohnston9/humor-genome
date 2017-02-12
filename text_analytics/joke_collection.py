@@ -7,7 +7,7 @@ import sklearn.cross_validation
 import sklearn.pipeline
 import sklearn.metrics
 
-from collections import Counter
+from collections import Counter, defaultdict
 import errno
 from heapq import nlargest
 import itertools
@@ -150,9 +150,45 @@ class JokeCollection:
 
 
 
+	def joke_generator(self, n, categories=None):
+		if n < 2:
+			raise Exception("n must be >= 2")
+		elif not isinstance(n, int):
+			raise Exception("n must be an integer")
 
+		### not currently working for n > 2
+		n = 2
 
+		if categories == None:
+			jokes_to_use = [nltk.word_tokenize(joke["content"]) for joke in self._jokes]
+		else:
+			if not isinstance(categories, list):
+				raise Exception("categories parameter should be either None or a list of categories (possibly containing just one category)")
+			jokes_to_use = [nltk.word_tokenize(joke["content"]) for joke in self._jokes if any(category in categories for category in joke["category"])]
 
+		print("getting ngrams")
+		all_ngrams = itertools.chain(*(nltk.ngrams(joke, n, pad_left=True, pad_right=True) for joke in jokes_to_use))
+		print("building ngram dict")
+		ngram_dict = defaultdict(Counter)
+		# pdb.set_trace()
+		for ngram in all_ngrams:
+			ngram_dict[ngram[0]][ngram[1]] += 1
+		print("done building ngram dict")
+		while True:
+			# starts = list(filter(lambda key: key[0] == None, ngram_dict.keys()))
+			# idx = np.random.choice(len(starts))
+			# sentence = [starts[idx]]
+			sentence = [None]
+			while True: ### just pretend this is a do-while loop
+				next_choices = ngram_dict[sentence[-1]] ### look up Counter corresponding to last (n-1) words in current sentence
+				# idx = np.random.choice(len(next_choices), 1, p=[item[1] for item in next_choices])
+				# sentence.append(next_choices[idx])
+				i = random.randrange(sum(next_choices.values()))
+				sentence.append(next(itertools.islice(next_choices.elements(), i, None)))
+				if sentence[-1] == None:
+					break
+				# print(sentence)
+			yield " ".join(sentence[1:-1]) ### leave off Nones
 
 
 
